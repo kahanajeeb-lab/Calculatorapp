@@ -1,4 +1,4 @@
-name: Unzip and Build Android APK
+name: Build Android APK
 
 on:
   push:
@@ -11,28 +11,200 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Unzip Project Files
-        run: |
-          unzip -o zip.zip -d .
-          chmod +x gradlew || true
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Generate Dummy Debug Keystore
+      - name: Create Project Structure
+        run: |
+          mkdir -p app/src/main/java/com/example/calculatorapp
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/layout
+
+          # 1. AndroidManifest.xml
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.example.calculatorapp">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.VIBRATE" />
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="Calculator"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          # 2. MainActivity.kt (Calculator disguise & Owner Name)
+          cat << 'EOF' > app/src/main/java/com/example/calculatorapp/MainActivity.kt
+          package com.example.calculatorapp
+
+          import android.os.Bundle
+          import androidx.activity.ComponentActivity
+          import androidx.activity.compose.setContent
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.material3.*
+          import androidx.compose.runtime.*
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.text.style.TextAlign
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+
+          class MainActivity : ComponentActivity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  setContent {
+                      CalculatorScreen()
+                  }
+              }
+          }
+
+          @Composable
+          fun CalculatorScreen() {
+              var display by remember { mutableStateOf("0") }
+              
+              Column(
+                  modifier = Modifier
+                      .fillMaxSize()
+                      .background(Color(0xFF17171C))
+                      .padding(16.dp),
+                  verticalArrangement = Arrangement.Bottom
+              ) {
+                  Text(
+                      text = "Owner by Raha Hamza Khan",
+                      color = Color.Gray,
+                      fontSize = 12.sp,
+                      modifier = Modifier.padding(bottom = 8.dp)
+                  )
+                  Text(
+                      text = display,
+                      modifier = Modifier
+                          .fillMaxWidth()
+                          .padding(vertical = 24.dp),
+                      fontSize = 48.sp,
+                      fontWeight = FontWeight.Bold,
+                      color = Color.White,
+                      textAlign = TextAlign.End
+                  )
+                  
+                  val buttons = listOf(
+                      listOf("C", "/", "*", "-"),
+                      listOf("7", "8", "9", "+"),
+                      listOf("4", "5", "6", "="),
+                      listOf("1", "2", "3", "0")
+                  )
+
+                  for (row in buttons) {
+                      Row(
+                          modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                          horizontalArrangement = Arrangement.spacedBy(8.dp)
+                      ) {
+                          for (text in row) {
+                              Button(
+                                  onClick = { 
+                                      if (text == "C") display = "0"
+                                      else if (display == "0") display = text
+                                      else display += text
+                                  },
+                                  modifier = Modifier.weight(1f).height(70.dp),
+                                  colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E2E2E))
+                              ) {
+                                  Text(text = text, fontSize = 24.sp, color = Color.White)
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+          EOF
+
+          # 3. build.gradle (Module)
+          cat << 'EOF' > app/build.gradle
+          plugins {
+              id 'com.android.application'
+              id 'org.jetbrains.kotlin.android'
+          }
+          android {
+              namespace 'com.example.calculatorapp'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.example.calculatorapp"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              buildFeatures { compose true }
+              composeOptions { kotlinCompilerExtensionVersion '1.5.8' }
+          }
+          dependencies {
+              implementation 'androidx.core:core-ktx:1.12.0'
+              implementation 'androidx.activity:activity-compose:1.8.2'
+              implementation platform('androidx.compose:compose-bom:2023.08.00')
+              implementation 'androidx.compose.ui:ui'
+              implementation 'androidx.compose.ui:ui-graphics'
+              implementation 'androidx.compose.material3:material3'
+          }
+          EOF
+
+          # 4. Project build.gradle
+          cat << 'EOF' > build.gradle
+          buildscript {
+              repositories { google(); mavenCentral() }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.0'
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22"
+              }
+          }
+          allprojects { repositories { google(); mavenCentral() } }
+          EOF
+
+          # 5. settings.gradle
+          cat << 'EOF' > settings.gradle
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "CalculatorApp"
+          include ':app'
+          EOF
+
+          # 6. gradle.properties
+          cat << 'EOF' > gradle.properties
+          android.useAndroidX=true
+          org.gradle.jvmargs=-Xmx2048m
+          EOF
+
+          gradle wrapper
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew || true
+
+      - name: Generate Dummy Keystore
         run: |
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Build Gradle APK
-        run: |
-          if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug
-          else
-            gradle assembleDebug
-          fi
+        run: ./gradlew assembleDebug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
