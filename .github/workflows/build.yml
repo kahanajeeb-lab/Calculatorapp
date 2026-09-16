@@ -165,17 +165,27 @@ jobs:
           }
           EOF
 
-          # 4. Root build.gradle (Cleaned)
+          # 4. Root build.gradle (With repositories fixed)
           cat << 'EOF' > build.gradle
           buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
               dependencies {
                   classpath 'com.android.tools.build:gradle:8.2.0'
                   classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22"
               }
           }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
           EOF
 
-          # 5. settings.gradle (Repositories handled properly here)
+          # 5. settings.gradle
           cat << 'EOF' > settings.gradle
           pluginManagement {
               repositories {
@@ -185,7 +195,7 @@ jobs:
               }
           }
           dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
               repositories {
                   google()
                   mavenCentral()
