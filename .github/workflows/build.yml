@@ -50,7 +50,7 @@ jobs:
           </manifest>
           EOF
 
-          # 2. MainActivity.kt (Calculator disguise & Owner Name)
+          # 2. MainActivity.kt
           cat << 'EOF' > app/src/main/java/com/example/calculatorapp/MainActivity.kt
           package com.example.calculatorapp
 
@@ -136,7 +136,7 @@ jobs:
           }
           EOF
 
-          # 3. build.gradle (Module)
+          # 3. app/build.gradle
           cat << 'EOF' > app/build.gradle
           plugins {
               id 'com.android.application'
@@ -165,24 +165,31 @@ jobs:
           }
           EOF
 
-          # 4. Project build.gradle
+          # 4. Root build.gradle (Cleaned)
           cat << 'EOF' > build.gradle
           buildscript {
-              repositories { google(); mavenCentral() }
               dependencies {
                   classpath 'com.android.tools.build:gradle:8.2.0'
                   classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22"
               }
           }
-          allprojects { repositories { google(); mavenCentral() } }
           EOF
 
-          # 5. settings.gradle
+          # 5. settings.gradle (Repositories handled properly here)
           cat << 'EOF' > settings.gradle
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
           dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories { google(); mavenCentral() }
+              repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
           }
           rootProject.name = "CalculatorApp"
           include ':app'
